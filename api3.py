@@ -217,7 +217,3 @@ def modify_multiple_measurements():
         response["not_found"] = not_found
     return jsonify(response), 201
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
-    app.run(host="0.0.0.0", port=5000)
