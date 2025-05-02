@@ -1,0 +1,222 @@
+from dotenv import load_dotenv
+load_dotenv()
+import psycopg2
+from flask import Flask, jsonify, request, send_file
+from datetime import datetime
+import os
+
+app = Flask(__name__)
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+@app.route('/')
+def root():
+    return send_file("index.html")
+    
+
+@app.route('/measurements', methods=['GET'])
+def get_measurements():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements ORDER BY id;")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    measurements = {row[0]: {
+        "station_name": row[1],
+        "date": row[2],
+        "ph": row[3],
+        "turbidity": row[4],
+        "dissolved_oxygen": row[5],
+        "temperature": row[6],
+        "conductivity": row[7]
+    } for row in rows}
+    return jsonify(measurements), 201
+
+
+@app.route('/measurements/<int:measurement_id>', methods=['GET'])
+def get_measurement(measurement_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements WHERE id = %s;", (measurement_id,))
+    row = cur.fetchone()
+    print(row)
+    cur.close()
+    conn.close()
+    if not row:
+        return jsonify({"error": "Measurement not found"}),404
+    measurement = {
+        "station_name": row[0],
+        "date": row[1],
+        "ph": row[2],
+        "turbidity": row[3],
+        "dissolved_oxygen": row[4],
+        "temperature": row[5],
+        "conductivity": row[6]
+    }
+    return jsonify(measurement), 201
+
+
+@app.route('/measurements/<string:station_name>', methods=['GET'])
+def get_measurement_by_station(station_name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements WHERE station_name = %s order by id;", (station_name,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    if not rows:
+        return jsonify({"error": f"No measurements found in {station_name}"}), 404
+    measurements = [{
+        "id": row[0],
+        "station_name": row[1],
+        "date": row[2],
+        "ph": row[3],
+        "turbidity": row[4],
+        "dissolved_oxygen": row[5],
+        "temperature": row[6],
+        "conductivity": row[7]
+    } for row in rows]
+    return jsonify(measurements), 201
+
+
+@app.route('/measurements', methods=['POST'])
+def create_measurement():
+    data = request.get_json()
+    added=[]
+    
+    for items in data:
+        time = datetime.now()
+        required_fields = ["station_name", "ph", "turbidity", "dissolved_oxygen", "temperature", "conductivity"]
+        missing_fields = [field for field in required_fields if field not in items]
+        if missing_fields:
+            return jsonify({"error": f"Missing required field: {', '.join(missing_fields)}"}), 404
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO measurements (station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id;
+            """,
+            (
+                items["station_name"],
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+                items["ph"],
+                items["turbidity"],
+                items["dissolved_oxygen"],
+                items["temperature"],
+                items["conductivity"]
+            )
+        )
+        new_id = cur.fetchone()[0]
+        added.append(new_id)
+        conn.commit()
+        cur.close()
+        conn.close()
+    return jsonify({"message": f"Measurement(s) added with id(s): {', '.join(map(str, added))}"}), 200
+
+
+
+@app.route('/measurements/<int:measurement_id>', methods=['DELETE'])
+def delete_measurement(measurement_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM measurements WHERE id = %s RETURNING id;", (measurement_id,))
+    deleted = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if not deleted:
+        return jsonify({"error": "Measurement not found"}), 404
+    return jsonify({"message": "Measurement deleted"}), 200
+
+
+@app.route('/measurements/<int:measurement_id>', methods=['PUT'])
+def modify_measurement(measurement_id):
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+    data = request.get_json()
+    time = datetime.now()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM measurements WHERE id = %s;", (measurement_id,))
+    if not cur.fetchone():
+        cur.close()
+        conn.close()
+        return jsonify({"error": "Measurement not found"}), 404
+    cur.execute(
+        """
+        UPDATE measurements SET station_name = %s, date = %s, ph = %s, turbidity = %s, dissolved_oxygen = %s, temperature = %s, conductivity = %s WHERE id = %s;
+        """,
+        (
+            data.get("station_name"),
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            data.get("ph"),
+            data.get("turbidity"),
+            data.get("dissolved_oxygen"),
+            data.get("temperature"),
+            data.get("conductivity"),
+            measurement_id
+        )
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"message": "Measurement updated"}), 200
+
+
+@app.route('/measurements/batch', methods=['PUT'])
+def modify_multiple_measurements():
+    data = request.get_json()
+    if not isinstance(data, list):
+        return jsonify({"error": "Request body must be a list of measurement updates"}), 404
+    updated = []
+    not_found = []
+    duplicate_id=set()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    time = datetime.now()
+    for item in data:
+        measurement_id = item.get("id")
+        if measurement_id in duplicate_id:
+            return jsonify({"error": "Duplicate ID found"}), 404
+        duplicate_id.add(measurement_id)
+        if "id" not in item:
+            return jsonify({"error": "Missing required field: id"}), 404
+        if measurement_id is None:
+            continue
+        cur.execute("SELECT * FROM measurements WHERE id = %s;", (measurement_id,))
+        if not cur.fetchone():
+            not_found.append(measurement_id)
+            continue
+        cur.execute(
+            """
+            UPDATE measurements SET station_name = %s, date = %s, ph = %s, turbidity = %s, dissolved_oxygen = %s, temperature = %s, conductivity = %s WHERE id = %s;
+            """,
+            (
+                item.get("station_name"),
+                time.strftime("%Y-%m-%d %H:%M:%S"),
+                item.get("ph"),
+                item.get("turbidity"),
+                item.get("dissolved_oxygen"),
+                item.get("temperature"),
+                item.get("conductivity"),
+                measurement_id
+            )
+        )
+        updated.append(measurement_id)
+    conn.commit()
+    cur.close()
+    conn.close()
+    response = {"updated": updated}
+    if not_found:
+        response["not_found"] = not_found
+    return jsonify(response), 201
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

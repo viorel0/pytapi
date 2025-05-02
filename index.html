@@ -1,0 +1,71 @@
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,height=device-height, initial-scale=1.0">
+        <title>API Testing Interface</title>
+        <link rel="stylesheet" href="static/style.css">
+    </head>
+
+    <body>
+        <header>
+            <h1>API Testing Interface</h1>
+        </header>
+        <div id="primu">
+            <div id="LeftContent"></div>
+            <main>
+                <div id="apiTester">
+                    <label for="method">HTTP Method:</label>
+                    <select id="method" name="method">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                    <br><br>
+                    <label for="endpoint">Endpoint:</label>
+                    <input type="text" id="endpoint" class="endpoint" placeholder="/measurements">
+                    <br><br>
+                    <label for="body">Request Body (JSON):</label>
+                    <textarea id="body" rows="10" cols="50" placeholder='{"key": "value"}'></textarea>
+                    <br><br>
+                    <button onclick="sendRequest()">Send Request</button>
+                    <br><br>
+                    <h3>Response:</h3>
+                    <pre id="response"></pre>
+                </div>
+            </main>
+            <div id="rightContent">
+                <h2>Example body POST JSON</h2>
+                <p class="json_example">
+                        [{"station_name": "river_station_2",
+                        "ph": 7.3,
+                        "turbidity": 36,
+                        "dissolved_oxygen": 8.3,
+                        "temperature": 15.5,
+                        "conductivity": 10000
+                        }]</p>
+                <h2>Example body PUT JSON</h2>
+                <p class="json_example">
+                       [{"id":1,
+                         "conductivity": 500,
+                         "dissolved_oxygen": 8.5,
+                         "ph": 7.2,
+                         "station_name": "river_station_1",
+                         "temperature": 15.2,
+                         "turbidity": 3.5
+                       },
+                       {"id":2,
+                         "conductivity": 500,
+                         "dissolved_oxygen": 8.2,
+                         "ph": 7.4,
+                         "station_name": "river_station_2",
+                         "temperature": 15.8,
+                         "turbidity": 4
+                       }]</p>
+            </div>
+
+        </div>
+       
+        <footer></footer>
+        
+        <script src="static/script.js"></script>
+    </body>

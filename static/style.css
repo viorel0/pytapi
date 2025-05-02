@@ -1,0 +1,76 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    text-align: center;
+}
+header {
+    background-color: #16ac59;
+    color: white;
+    padding: 10px 0;
+    width: 100%;
+}
+main {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+footer {
+    background-color: #16ac59;
+    padding: 20px;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+#primu {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+#apiTester {
+    text-align: left;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    min-width: 600px;
+}
+
+#rightContent {
+    flex: 0 0 300px;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#leftContent {
+    flex: 0 0 300px;
+    padding: 1rem;
+}
+
+textarea {
+    width: 100%;
+    resize: none;
+}
+pre {
+    background: #f4f4f4;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: left;
+    overflow-x: auto;
+}
+.endpoint {
+    width: 60%;
+    padding: 5px;
+
+}
+.json_example {
+    text-align: left;
+}
