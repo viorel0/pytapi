@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 import psycopg2
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, render_template
 from datetime import datetime
 import os
 
@@ -14,7 +14,7 @@ def get_db_connection():
 
 @app.route('/')
 def root():
-    return send_file("index.html")
+    return render_template("index.html")
     
 
 @app.route('/measurements', methods=['GET'])
