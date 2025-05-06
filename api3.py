@@ -144,23 +144,34 @@ def modify_measurement(measurement_id):
     time = datetime.now()
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM measurements WHERE id = %s;", (measurement_id,))
-    if not cur.fetchone():
+   
+    cur.execute("SELECT station_name, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements WHERE id = %s;", (measurement_id,))
+    current = cur.fetchone()
+
+    if not current:
         cur.close()
         conn.close()
         return jsonify({"error": "Measurement not found"}), 404
+    
+    station_name = data.get("station_name", current[0])
+    ph = data.get("ph", current[1])
+    turbidity = data.get("turbidity", current[2])
+    dissolved_oxygen = data.get("dissolved_oxygen", current[3])
+    temperature = data.get("temperature", current[4])
+    conductivity = data.get("conductivity", current[5])
+    
     cur.execute(
         """
         UPDATE measurements SET station_name = %s, date = %s, ph = %s, turbidity = %s, dissolved_oxygen = %s, temperature = %s, conductivity = %s WHERE id = %s;
         """,
         (
-            data.get("station_name"),
+            station_name,
             time.strftime("%Y-%m-%d %H:%M:%S"),
-            data.get("ph"),
-            data.get("turbidity"),
-            data.get("dissolved_oxygen"),
-            data.get("temperature"),
-            data.get("conductivity"),
+            ph,
+            turbidity,
+            dissolved_oxygen,
+            temperature,
+            conductivity,
             measurement_id
         )
     )
