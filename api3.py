@@ -182,6 +182,7 @@ def modify_multiple_measurements():
     cur = conn.cursor()
     time = datetime.now()
     for item in data:
+        print(item)
         measurement_id = item.get("id")
         if measurement_id in duplicate_id:
             cur.close()
@@ -194,22 +195,31 @@ def modify_multiple_measurements():
             return jsonify({"error": "Missing required field: id"}), 404
         # if measurement_id is None:
         #     continue
-        cur.execute("SELECT * FROM measurements WHERE id = %s;", (measurement_id,))
-        if not cur.fetchone():
+        cur.execute("SELECT station_name, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements WHERE id = %s;", (measurement_id,))
+        current = cur.fetchone()
+        if not current:
             not_found.append(measurement_id)
             continue
+
+        station_name = item.get("station_name", current[0])
+        ph = item.get("ph", current[1])
+        turbidity = item.get("turbidity", current[2])
+        dissolved_oxygen = item.get("dissolved_oxygen", current[3])
+        temperature = item.get("temperature", current[4])
+        conductivity = item.get("conductivity", current[5])
+
         cur.execute(
             """
             UPDATE measurements SET station_name = %s, date = %s, ph = %s, turbidity = %s, dissolved_oxygen = %s, temperature = %s, conductivity = %s WHERE id = %s;
             """,
             (
-                item.get("station_name"),
+                station_name,
                 time.strftime("%Y-%m-%d %H:%M:%S"),
-                item.get("ph"),
-                item.get("turbidity"),
-                item.get("dissolved_oxygen"),
-                item.get("temperature"),
-                item.get("conductivity"),
+                ph,
+                turbidity,
+                dissolved_oxygen,
+                temperature,
+                conductivity,
                 measurement_id
             )
         )
