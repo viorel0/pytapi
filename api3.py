@@ -87,15 +87,16 @@ def get_measurement_by_station(station_name):
 def create_measurement():
     data = request.get_json()
     added=[]
-    
+    conn = get_db_connection()
+    cur = conn.cursor()
     for items in data:
         time = datetime.now()
         required_fields = ["station_name", "ph", "turbidity", "dissolved_oxygen", "temperature", "conductivity"]
         missing_fields = [field for field in required_fields if field not in items]
         if missing_fields:
+            cur.close()
+            conn.close()
             return jsonify({"error": f"Missing required field: {', '.join(missing_fields)}"}), 404
-        conn = get_db_connection()
-        cur = conn.cursor()
         cur.execute(
             """
             INSERT INTO measurements (station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity)
@@ -114,9 +115,9 @@ def create_measurement():
         )
         new_id = cur.fetchone()[0]
         added.append(new_id)
-        conn.commit()
-        cur.close()
-        conn.close()
+    conn.commit()
+    cur.close()
+    conn.close()
     return jsonify({"message": f"Measurement(s) added with id(s): {', '.join(map(str, added))}"}), 200
 
 
@@ -183,12 +184,16 @@ def modify_multiple_measurements():
     for item in data:
         measurement_id = item.get("id")
         if measurement_id in duplicate_id:
+            cur.close()
+            conn.close()
             return jsonify({"error": "Duplicate ID found"}), 404
         duplicate_id.add(measurement_id)
         if "id" not in item:
+            cur.close()
+            conn.close()
             return jsonify({"error": "Missing required field: id"}), 404
-        if measurement_id is None:
-            continue
+        # if measurement_id is None:
+        #     continue
         cur.execute("SELECT * FROM measurements WHERE id = %s;", (measurement_id,))
         if not cur.fetchone():
             not_found.append(measurement_id)
@@ -216,4 +221,3 @@ def modify_multiple_measurements():
     if not_found:
         response["not_found"] = not_found
     return jsonify(response), 201
-
