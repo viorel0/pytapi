@@ -139,7 +139,7 @@ def delete_multiple_by_url(ids):
     try:
         id_list = [int(i) for i in ids.split(',') if i.strip().isdigit()]
     except ValueError:
-        return jsonify({"error": "Invalid ID format"}), 400
+        return jsonify({"error": "Invalid ID format"}), 404
 
     conn = get_db_connection()
     cur = conn.cursor()
