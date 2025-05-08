@@ -43,7 +43,6 @@ def get_measurement(measurement_id):
     cur = conn.cursor()
     cur.execute("SELECT station_name, date, ph, turbidity, dissolved_oxygen, temperature, conductivity FROM measurements WHERE id = %s;", (measurement_id,))
     row = cur.fetchone()
-    print(row)
     cur.close()
     conn.close()
     if not row:
@@ -135,6 +134,31 @@ def delete_measurement(measurement_id):
         return jsonify({"error": "Measurement not found"}), 404
     return jsonify({"message": "Measurement deleted"}), 200
 
+@app.route('/measurements/<ids>', methods=['DELETE'])
+def delete_multiple_by_url(ids):
+    try:
+        id_list = [int(i) for i in ids.split(',') if i.strip().isdigit()]
+    except ValueError:
+        return jsonify({"error": "Invalid ID format"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    deleted = []
+    not_found = []
+    for measurement_id in id_list:
+        cur.execute("DELETE FROM measurements WHERE id = %s RETURNING id;", (measurement_id,))
+        result = cur.fetchone()
+        if result:
+            deleted.append(measurement_id)
+        else:
+            not_found.append(measurement_id)
+    conn.commit()
+    cur.close()
+    conn.close()
+    response = {"deleted": deleted}
+    if not_found:
+        response["not_found"] = not_found
+    return jsonify(response), 201
 
 @app.route('/measurements/<int:measurement_id>', methods=['PUT'])
 def modify_measurement(measurement_id):
@@ -242,3 +266,7 @@ def modify_multiple_measurements():
     if not_found:
         response["not_found"] = not_found
     return jsonify(response), 201
+
+
+if __name__ == '__main__': 
+    app.run(debug=True)
